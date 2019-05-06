@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>CreativeProject</title>
+  <base href="/">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <!--BOOTSTRAP CSS-->
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+  <!--Angular-->    
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.7.5/angular.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.7.5/angular-route.min.js"></script>
+
+  <!--RTC-->
+  <script type="text/javascript" src="https://rtcmulticonnection.herokuapp.com/dist/RTCMultiConnection.min.js"></script>
+  <script type="text/javascript" src="https://rtcmulticonnection.herokuapp.com/dev/getHTMLMediaElement.js"></script>
+  <script type="text/javascript" src="https://rtcmulticonnection.herokuapp.com/socket.io/socket.io.js"></script>
+  <!--Access to Google API-->
+  <script async defer
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC1soN6m6TUODWQ71R4EBWzQCWPrdUlIkE&callback=initMap">
+  </script>
+<script type="text/javascript">
+(function(angular){
+    var app = angular.module('ngLoadScript', []);
+    /*app.config(function($routeProvider, $locationProvider) {                        
+        $routeProvider                                                                
+            .when('/room', {                                                                                           
+                controller:'googmapsController'                                
+            })                                                                      
+            .when('/video-stream', {                      
+                controller:'videoController'      
+            });      
+});*/
+    app.controller('videoController', ['$scope', function($scope) {
+        $scope.code = {
+          text: "hi"
+        };
+    }]);
+    app.controller('googmapsController', ['$scope', function($scope){
+        $scope.code = {
+            text: "hello"
+        }
+    }]);
+    
+  app.directive('script', function() {
+    return {
+              scope: true,
+              link: function(scope, elem, attr) {
+                  if (attr.type=='text/javascript-lazy') {
+                      var code = elem.text();
+                      var f = new Function(code);
+                      f();
+                  }
+              },
+          };
+  });
+})(window.angular);
+
+</script>
+</head>
+<body >
+<div >
+  <div ng-app="ngLoadScript">
+    <app-root ng-controller="googmapsController">
+        <script type="text/javascript-lazy">
+            console.log("also here");
+            // Note: This example requires that you consent to location sharing when
+            // prompted by your browser. If you see the error "The Geolocation service
+            // failed.", it means you probably did not give permission for the browser to
+            // locate you.
+          var map, infoWindow, geocoder;
+      
+          //connect to socket
+          var socket = io.connect('https://localhost:3456/');
+          socket.on('connect', function(){
+              console.log('connected2 to server');
+          });
+      
+            function initMap() {
+              map = new google.maps.Map(document.getElementById('map'), {
+                center: {lat: -34.397, lng: 150.644},
+                zoom: 8
+              });
+              infoWindow = new google.maps.InfoWindow;
+              geocoder = new google.maps.Geocoder;
+              // Try HTML5 geolocation.
+              if (navigator.geolocation) {
+                  //able to access user's location
+                navigator.geolocation.getCurrentPosition(function(position) {
+                  //save user's latitude & longitude in correct format
+                  var pos = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                  };
+      
+                  //notify server that user's location has been found
+                  socket.emit("gotCurrentPosition", pos);
+      
+                  //display user's location on map
+                  infoWindow.setPosition(pos);
+                  infoWindow.setContent('Location found.');
+                  infoWindow.open(map);
+                  map.setCenter(pos);
+      
+                  //find user's address
+                  geocodeLatLng(geocoder, map, infoWindow, pos);
+      
+                }, function() {
+                  handleLocationError(true, infoWindow, map.getCenter());
+                });
+              } else {
+                // Browser doesn't support Geolocation
+                handleLocationError(false, infoWindow, map.getCenter());
+              }
+            }
+      
+            function handleLocationError(browserHasGeolocation, infoWindow, pos) {
+              infoWindow.setPosition(pos);
+              infoWindow.setContent(browserHasGeolocation ?
+                                    'Error: The Geolocation service failed.' :
+                                    'Error: Your browser doesn\'t support geolocation.');
+              infoWindow.open(map);
+            }
+      
+      //performs reverse geocode function (provide longitude&latitude -> array of addresses)
+      function geocodeLatLng(geocoder, map, infowindow, pos) {
+          geocoder.geocode({'location': pos}, function(results, status) {
+          if (status === 'OK') {
+              if (results[0]) {
+                  console.log("reverse geocoding results: ", results);
+                  //zoom into user loc on map
+                  map.setZoom(11);
+                  //make new marker for user loc
+                  var marker = new google.maps.Marker({
+                      position: pos,
+                      map: map
+                  });
+                  
+                  //display most likely address
+                  var address = results[0].formatted_address;
+                  infowindow.setContent(address);
+                  infowindow.open(map, marker);
+            } else {
+              window.alert('No results found');
+            }
+          } else {
+            window.alert('Geocoder failed due to: ' + status);
+          }
+        });
+      }
+      
+        </script>
+    </app-root>
+    <app-video ng-controller="videoController"> 
+      <script type="text/javascript-lazy">   
+        console.log("here2");
+        // ......................................................
+            // .......................UI Code........................
+            // ......................................................
+            if(document.getElementById('open-room') || document.getElementById('join-room')){
+              document.getElementById('open-room').onclick = function() {
+                disableInputButtons();
+                connection.open(document.getElementById('room-id').value, function() {
+                    showRoomURL(connection.sessionid);
+                });
+              };
+              document.getElementById('join-room').onclick = function() {
+                  disableInputButtons();
+                  connection.sdpConstraints.mandatory = {
+                      OfferToReceiveAudio: true,
+                      OfferToReceiveVideo: true
+                  };
+                  connection.join(document.getElementById('room-id').value);
+              };
+            }
+        
+            
+            // ......................................................
+            // ..................RTCMultiConnection Code.............
+            // ......................................................
+            var connection = new RTCMultiConnection();
+            // by default, socket.io server is assumed to be deployed on your own URL
+            //connection.socketURL = 'http://localhost:3456/';
+            // comment-out below line if you do not have your own socket.io server
+            connection.socketURL = 'https://rtcmulticonnection.herokuapp.com:443/';
+            connection.socketMessageEvent = 'video-broadcast-demo';
+            connection.session = {
+                audio: true,
+                video: true,
+                oneway: true
+            };
+            connection.sdpConstraints.mandatory = {
+                OfferToReceiveAudio: false,
+                OfferToReceiveVideo: false
+            };
+            connection.videosContainer = document.getElementById('videos-container');
+            connection.onstream = function(event) {
+                var existing = document.getElementById(event.streamid);
+                if(existing && existing.parentNode) {
+                  existing.parentNode.removeChild(existing);
+                }
+                event.mediaElement.removeAttribute('src');
+                event.mediaElement.removeAttribute('srcObject');
+                event.mediaElement.muted = true;
+                event.mediaElement.volume = 0;
+                var video = document.createElement('video');
+                try {
+                    video.setAttributeNode(document.createAttribute('autoplay'));
+                    video.setAttributeNode(document.createAttribute('playsinline'));
+                } catch (e) {
+                    video.setAttribute('autoplay', true);
+                    video.setAttribute('playsinline', true);
+                }
+                if(event.type === 'local') {
+                  video.volume = 0;
+                  try {
+                      video.setAttributeNode(document.createAttribute('muted'));
+                  } catch (e) {
+                      video.setAttribute('muted', true);
+                  }
+                }
+                video.srcObject = event.stream;
+                var width = parseInt(connection.videosContainer.clientWidth / 3) - 20;
+                var mediaElement = getHTMLMediaElement(video, {
+                    title: event.userid,
+                    buttons: ['full-screen'],
+                    width: width,
+                    showOnMouseEnter: false
+                });
+                connection.videosContainer.appendChild(mediaElement);
+                setTimeout(function() {
+                    mediaElement.media.play();
+                }, 5000);
+                mediaElement.id = event.streamid;
+            };
+            connection.onstreamended = function(event) {
+                var mediaElement = document.getElementById(event.streamid);
+                if (mediaElement) {
+                    mediaElement.parentNode.removeChild(mediaElement);
+                    if(event.userid === connection.sessionid && !connection.isInitiator) {
+                      alert('Broadcast is ended. We will reload this page to clear the cache.');
+                      location.reload();
+                    }
+                }
+            };
+            connection.onMediaError = function(e) {
+                if (e.message === 'Concurrent mic process limit.') {
+                    if (DetectRTC.audioInputDevices.length <= 1) {
+                        alert('Please select external microphone. Check github issue number 483.');
+                        return;
+                    }
+                    var secondaryMic = DetectRTC.audioInputDevices[1].deviceId;
+                    connection.mediaConstraints.audio = {
+                        deviceId: secondaryMic
+                    };
+                    connection.join(connection.sessionid);
+                }
+            };
+            // ..................................
+            // ALL below scripts are redundant!!!
+            // ..................................
+            function disableInputButtons() {
+                document.getElementById('open-room').disabled = true;
+                document.getElementById('join-room').disabled = true;
+                document.getElementById('room-id').disabled = true;
+            }
+            // ......................................................
+            // ......................Handling Room-ID................
+            // ......................................................
+            function showRoomURL(roomid) {
+                var roomHashURL = '#' + roomid;
+                var roomQueryStringURL = '?roomid=' + roomid;
+                var html = '<h2>Unique URL for your room:</h2><br>';
+                html += 'Hash URL: <a href="' + roomHashURL + '" target="_blank">' + roomHashURL + '</a>';
+                html += '<br>';
+                html += 'QueryString URL: <a href="' + roomQueryStringURL + '" target="_blank">' + roomQueryStringURL + '</a>';
+                var roomURLsDiv = document.getElementById('room-urls');
+                roomURLsDiv.innerHTML = html;
+                roomURLsDiv.style.display = 'block';
+            }
+            (function() {
+                var params = {},
+                    r = /([^&=]+)=?([^&]*)/g;
+                function d(s) {
+                    return decodeURIComponent(s.replace(/\+/g, ' '));
+                }
+                var match, search = window.location.search;
+                while (match = r.exec(search.substring(1)))
+                    params[d(match[1])] = d(match[2]);
+                window.params = params;
+            })();
+            var roomid = '';
+            if (localStorage.getItem(connection.socketMessageEvent)) {
+                roomid = localStorage.getItem(connection.socketMessageEvent);
+            } else {
+                roomid = connection.token();
+            }
+            if(document.getElementById('room-id')){
+              document.getElementById('room-id').value = roomid;
+            }
+            
+            var hashString = location.hash.replace('#', '');
+            if (hashString.length && hashString.indexOf('comment-') == 0) {
+                hashString = '';
+            }
+            var roomid = params.roomid;
+            if (!roomid && hashString.length) {
+                roomid = hashString;
+            }
+            if (roomid && roomid.length) {
+                document.getElementById('room-id').value = roomid;
+                localStorage.setItem(connection.socketMessageEvent, roomid);
+                // auto-join-room
+                (function reCheckRoomPresence() {
+                    connection.checkPresence(roomid, function(isRoomExist) {
+                        if (isRoomExist) {
+                            connection.join(roomid);
+                            return;
+                        }
+                        setTimeout(reCheckRoomPresence, 5000);
+                    });
+                })();
+                disableInputButtons();
+            }
+            // detect 2G
+            if(navigator.connection &&
+               navigator.connection.type === 'cellular' &&
+               navigator.connection.downlinkMax <= 0.115) {
+              alert('2G is not supported. Please use a better internet service.');
+            }
+      </script>
+    </app-video>
+  </div>
+  
+</div>
+</body>
+</html>

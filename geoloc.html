@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Geolocation</title>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.4/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <style>
+      /* Always set the map height explicitly to define the size of the div
+       * element that contains the map. */
+      #map {
+        height: 100%;
+      }
+      /* Optional: Makes the sample page fill the window. */
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+    <!--<script type="text/javascript" src="./googlemaps.js"></script>-->
+  </head>
+  <body>
+    <div id="map"></div>
+    <script type="text/javascript">
+      // Note: This example requires that you consent to location sharing when
+      // prompted by your browser. If you see the error "The Geolocation service
+      // failed.", it means you probably did not give permission for the browser to
+      // locate you.
+    var map, infoWindow, geocoder;
+
+    //connect to socket
+    var socket = io.connect();
+    socket.on('connect', function(){
+        console.log('connected to server');
+    });
+
+      function initMap() {
+        map = new google.maps.Map(document.getElementById('map'), {
+          center: {lat: -34.397, lng: 150.644},
+          zoom: 8
+        });
+        infoWindow = new google.maps.InfoWindow;
+        geocoder = new google.maps.Geocoder;
+        // Try HTML5 geolocation.
+        if (navigator.geolocation) {
+            //able to access user's location
+          navigator.geolocation.getCurrentPosition(function(position) {
+            //save user's latitude & longitude in correct format
+            var pos = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            };
+
+            //notify server that user's location has been found
+            socket.emit("gotCurrentPosition", pos);
+
+            //display user's location on map
+            infoWindow.setPosition(pos);
+            infoWindow.setContent('Location found.');
+            infoWindow.open(map);
+            map.setCenter(pos);
+
+            //find user's address
+            geocodeLatLng(geocoder, map, infoWindow, pos);
+
+          }, function() {
+            handleLocationError(true, infoWindow, map.getCenter());
+          });
+        } else {
+          // Browser doesn't support Geolocation
+          handleLocationError(false, infoWindow, map.getCenter());
+        }
+      }
+
+      function handleLocationError(browserHasGeolocation, infoWindow, pos) {
+        infoWindow.setPosition(pos);
+        infoWindow.setContent(browserHasGeolocation ?
+                              'Error: The Geolocation service failed.' :
+                              'Error: Your browser doesn\'t support geolocation.');
+        infoWindow.open(map);
+      }
+
+//performs reverse geocode function (provide longitude&latitude -> array of addresses)
+function geocodeLatLng(geocoder, map, infowindow, pos) {
+    geocoder.geocode({'location': pos}, function(results, status) {
+    if (status === 'OK') {
+        if (results[0]) {
+            console.log("reverse geocoding results: ", results);
+            //zoom into user loc on map
+            map.setZoom(11);
+            //make new marker for user loc
+            var marker = new google.maps.Marker({
+                position: pos,
+                map: map
+            });
+            
+            //display most likely address
+            var address = results[0].formatted_address;
+            infowindow.setContent(address);
+            infowindow.open(map, marker);
+      } else {
+        window.alert('No results found');
+      }
+    } else {
+      window.alert('Geocoder failed due to: ' + status);
+    }
+  });
+}
+
+    </script>
+    <!--Access to Google API-->
+    <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC1soN6m6TUODWQ71R4EBWzQCWPrdUlIkE&callback=initMap">
+    </script>
+  </body>
+</html>

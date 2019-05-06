@@ -1,0 +1,36 @@
+<div style="text-align:center">
+  <h1>{{title}}</h1>
+  <nav #loggedout id="nav1">
+  <a routerLink="/dashboard">Dashboard</a>
+  <a routerLink="/login">Login</a>
+  <a routerLink="/signup">Signup</a>
+  <button #submit (click)="refresh()"> RefreshNav</button>
+
+
+  </nav>
+  
+  <nav #loggedin id="nav2" >
+  <a routerLink="/rooms">Rooms</a>
+  <a routerLink="/add-room">Add Room</a>
+  <a routerLink="/edit-account">Edit Account</a>
+  <a routerLink="/delete-account">Delete Account</a>
+  <a routerLink="/delete-room">Delete Room</a>
+  <a routerLink="/user-search">Search for Friends</a>
+  <a routerLink="/video-stream">Video Chat</a>
+
+  <a routerLink="/logout">Logout</a>
+  <button #submit (click)="refresh()"> RefreshNav</button>
+  </nav>
+<router-outlet></router-outlet>
+<app-messages></app-messages>
+</div>
+
+
+
+
+
+
+
+
+
+
